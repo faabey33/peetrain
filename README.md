@@ -1,4 +1,4 @@
-# Train Toilet Tracker
+# Zugscheisser
 
 This Python code retrieves the timetable for a given train station from the Deutsche Bahn API and then calculates the time difference between the scheduled arrival and departure times for each train, sorting the results by the largest difference. This can be useful for finding trains that are currently waiting in a station, allowing you to easily locate a train with an available toilet.
 
