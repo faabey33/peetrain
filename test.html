@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+  <meta charset="utf-8" />
+  <title>Deutsche Bahn API Example</title>
+</head>
+
+<body>
+  <h1>Deutsche Bahn API Example</h1>
+  <p>Open the browser console to see the results.</p>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
+  <script src="https://code.jquery.com/jquery-3.6.4.min.js"
+    integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+  <script>
+    function XmlListConfig(xml) {
+      var obj = {};
+      if (xml.nodeType == 1) {
+        if (xml.attributes.length > 0) {
+          obj["@attributes"] = {};
+          for (var j = 0; j < xml.attributes.length; j++) {
+            var attribute = xml.attributes.item(j);
+            obj["@attributes"][attribute.nodeName] = attribute.nodeValue;
+          }
+        }
+      } else if (xml.nodeType == 3) {
+        obj = xml.nodeValue;
+      }
+      if (xml.hasChildNodes()) {
+        for (var i = 0; i < xml.childNodes.length; i++) {
+          var item = xml.childNodes.item(i);
+          var nodeName = item.nodeName;
+          if (typeof (obj[nodeName]) == "undefined") {
+            obj[nodeName] = XmlListConfig(item);
+          } else {
+            if (typeof (obj[nodeName].push) == "undefined") {
+              var old = obj[nodeName];
+              obj[nodeName] = [];
+              obj[nodeName].push(old);
+            }
+            obj[nodeName].push(XmlListConfig(item));
+          }
+        }
+      }
+      return obj;
+    }
+
+    async function run() {
+
+      // Suggestion API
+      // https://www.bahnhof.de/api/stations/suggest/ber --> Berlin HBF,...
+
+      const input = "ber";
+
+      // const suggestionUrl = `https://www.bahnhof.de/api/stations/suggest/${input}`;
+      const suggestionUrl = `https://www.bahnhof.de/en/berlin-hauptbahnhof`
+
+      try {
+        const response = await $.ajax({
+          url: suggestionUrl,
+          type: 'GET',
+          headers: {
+            "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-GB,en;q=0.9",
+            "Connection": "keep-alive",
+            "Cookie": "e6647c64541c1394caa6ecc89c1b1e9f=fc474a4bb6510e1c488fc6dccf934086; _pk_id.17.e06e=45b8870724dca1ff.1681240933.; _pk_ses.17.e06e=1; TS01851168=0121ca1b95d7f60aa6a78eb71c8f41db1b97c34095e8289abe388a65e16f4b62594b083f828c4f8567de11804e1c95ee513c89826f; utag_main=v_id:018771c4ba98000ed025f32356c70506f002d06700838$_sn:1$_se:6$_ss:0$_st:1681243680761$ses_id:1681240930970%3Bexp-session$_pn:5%3Bexp-session",
+            "DNT": "1",
+            "Host": "www.bahnhof.de",
+            "Referer": "https://www.bahnhof.de/en",
+            "sec-ch-ua": "\"Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111\"",
+            "sec-ch-ua-mobile": "?0",
+            "sec-ch-ua-platform": "\"Windows\"",
+            "Sec-Fetch-Dest": "empty",
+            "Sec-Fetch-Mode": "cors",
+            "Sec-Fetch-Site": "same-origin",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
+          }
+
+        });
+
+        console.log(response);
+
+      } catch (error) {
+        console.error('Request failed. Returned status of ' + error.status + "\n\n" + error);
+      }
+
+
+      const now = moment();
+      const pattern = "BLS";
+      const YYMMDD = now.format("YYMMDD");
+      const HH = now.format("HH");
+      let meta_evas;
+      let stationsArray;
+
+      const url = `https://iris.noncd.db.de/iris-tts/timetable/station/${pattern}`;
+
+      try {
+        const response = await $.ajax({
+          url: url,
+          type: 'GET',
+        });
+
+        console.log(response);
+        const xmljson = XmlListConfig(response);
+        stationsArray = xmljson.stations;
+
+        // One station can have multiple eva ids e.g Berlin HBF: [Berlin HBF, Berlin HBF S, Berlin HBF tief]
+        meta_evas = stationsArray.station['@attributes'].meta.split("|");
+      } catch (error) {
+        console.error('Request failed. Returned status of ' + error.status);
+      }
+
+      async function transformXMLToNiceJSON(response) {
+
+        if (!response) return [];
+
+        const timetableArray = XmlListConfig(response);
+
+        if (!(timetableArray.timetable.hasOwnProperty("@attributes"))) return [];
+
+        const timetableArray_s = timetableArray.timetable.s;
+
+        const filteredData = timetableArray_s.filter(row => row.ar && row.dp);
+
+        const newData = filteredData.map(row => {
+          const arDateTime = moment(row.ar['@attributes'].pt, "YYMMDDHHmm").toDate();
+          const dpDateTime = moment(row.dp['@attributes'].pt, "YYMMDDHHmm").toDate();
+
+          return {
+            c: row.tl['@attributes'].c,
+            n: row.tl['@attributes'].n,
+            pp_ar: row.ar['@attributes'].pp,
+            pt_ar: arDateTime,
+            pt_dp: dpDateTime,
+          };
+        });
+
+        return newData;
+      }
+
+      async function getTimeTable(evaArray, YYMMDD, HH) {
+        let fullData = [];
+
+        for (const eva of evaArray) {
+          const url = `https://iris.noncd.db.de/iris-tts/timetable/plan/${eva}/${YYMMDD}/${HH}`;
+          try {
+            const response = await $.ajax({
+              url: url,
+              type: 'GET',
+            });
+            fullData = fullData.concat(await transformXMLToNiceJSON(response));
+
+          } catch {
+            console.log("GET Failed");
+          }
+
+        }
+
+        const sortedData = fullData.sort((a, b) => b.pt_dp - b.pt_ar - (a.pt_dp - a.pt_ar));
+
+        const finalData = sortedData.map(row => ({
+          c: row.c,
+          n: row.n,
+          pp_ar: row.pp_ar,
+          pt_ar: row.pt_ar,
+          pt_dp: row.pt_dp,
+          delta_minutes: Math.round((row.pt_dp - row.pt_ar) / (1000 * 60)),
+        }));
+
+        console.table(finalData);
+        return finalData
+      }
+      meta_evas = [8089021, 8011160, 8098160]
+      await getTimeTable(meta_evas, YYMMDD, HH);
+    }
+
+    run();
+  </script>
+</body>
+
+</html>
