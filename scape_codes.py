@@ -58,6 +58,7 @@ async def main():
 
     df_codes = pd.DataFrame(all_tups)
     df_codes.to_json("./dbCodes.json", orient="table", force_ascii=False)
+    df_codes.to_csv("./dbCodes.csv")
     print(df_codes)
 
 
