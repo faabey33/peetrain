@@ -9,6 +9,20 @@
 <body>
   <h1>Deutsche Bahn API Example</h1>
   <p>Open the browser console to see the results.</p>
+
+  <table id="timetable">
+    <thead>
+      <tr>
+        <th>Type</th>
+        <th>Number</th>
+        <th>Platform</th>
+        <th>Arrival</th>
+        <th>Departure</th>
+        <th>Delta(min)</th>
+      </tr>
+    </thead>
+
+  </table>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.1/moment.min.js"></script>
   <script src="https://code.jquery.com/jquery-3.6.4.min.js"
     integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
@@ -45,52 +59,35 @@
       return obj;
     }
 
-    async function run() {
+    function updateTable(data) {
 
-      // Suggestion API
-      // https://www.bahnhof.de/api/stations/suggest/ber --> Berlin HBF,...
+      const keys = ['c', 'n', 'pp_dp', 'pt_ar', 'pt_dp', 'delta_minutes']
+      // Get a reference to the table element
+      const table = document.getElementById("timetable");
+      
+      // Loop through the array of data
+      for (let i = 0; i < data.length; i++) {
+        
+        // Create a new row for the table
+        const newRow = table.insertRow(-1);
 
-      const input = "ber";
+        for (const key of keys) {
+          var cell = newRow.insertCell(-1);
+          cell.textContent = data[i][key]
 
-      // const suggestionUrl = `https://www.bahnhof.de/api/stations/suggest/${input}`;
-      const suggestionUrl = `https://www.bahnhof.de/en/berlin-hauptbahnhof`
-
-      try {
-        const response = await $.ajax({
-          url: suggestionUrl,
-          type: 'GET',
-          headers: {
-            "Accept": "*/*",
-            "Accept-Encoding": "gzip, deflate, br",
-            "Accept-Language": "en-GB,en;q=0.9",
-            "Connection": "keep-alive",
-            "Cookie": "e6647c64541c1394caa6ecc89c1b1e9f=fc474a4bb6510e1c488fc6dccf934086; _pk_id.17.e06e=45b8870724dca1ff.1681240933.; _pk_ses.17.e06e=1; TS01851168=0121ca1b95d7f60aa6a78eb71c8f41db1b97c34095e8289abe388a65e16f4b62594b083f828c4f8567de11804e1c95ee513c89826f; utag_main=v_id:018771c4ba98000ed025f32356c70506f002d06700838$_sn:1$_se:6$_ss:0$_st:1681243680761$ses_id:1681240930970%3Bexp-session$_pn:5%3Bexp-session",
-            "DNT": "1",
-            "Host": "www.bahnhof.de",
-            "Referer": "https://www.bahnhof.de/en",
-            "sec-ch-ua": "\"Google Chrome\";v=\"111\", \"Not(A:Brand\";v=\"8\", \"Chromium\";v=\"111\"",
-            "sec-ch-ua-mobile": "?0",
-            "sec-ch-ua-platform": "\"Windows\"",
-            "Sec-Fetch-Dest": "empty",
-            "Sec-Fetch-Mode": "cors",
-            "Sec-Fetch-Site": "same-origin",
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/111.0.0.0 Safari/537.36"
-          }
-
-        });
-
-        console.log(response);
-
-      } catch (error) {
-        console.error('Request failed. Returned status of ' + error.status + "\n\n" + error);
+        }
       }
+    }
 
+    let finalData;
+
+    async function run() {
 
       const now = moment();
       const pattern = "BLS";
       const YYMMDD = now.format("YYMMDD");
-      const HH = now.format("HH");
-      let meta_evas;
+      let HH = now.format("HH");
+      let evas;
       let stationsArray;
 
       const url = `https://iris.noncd.db.de/iris-tts/timetable/station/${pattern}`;
@@ -106,7 +103,8 @@
         stationsArray = xmljson.stations;
 
         // One station can have multiple eva ids e.g Berlin HBF: [Berlin HBF, Berlin HBF S, Berlin HBF tief]
-        meta_evas = stationsArray.station['@attributes'].meta.split("|");
+        evas = [stationsArray.station['@attributes'].eva];
+        console.log(evas);
       } catch (error) {
         console.error('Request failed. Returned status of ' + error.status);
       }
@@ -131,6 +129,7 @@
             c: row.tl['@attributes'].c,
             n: row.tl['@attributes'].n,
             pp_ar: row.ar['@attributes'].pp,
+            pp_dp: row.dp['@attributes'].pp,
             pt_ar: arDateTime,
             pt_dp: dpDateTime,
           };
@@ -142,39 +141,47 @@
       async function getTimeTable(evaArray, YYMMDD, HH) {
         let fullData = [];
 
-        for (const eva of evaArray) {
-          const url = `https://iris.noncd.db.de/iris-tts/timetable/plan/${eva}/${YYMMDD}/${HH}`;
-          try {
-            const response = await $.ajax({
-              url: url,
-              type: 'GET',
-            });
-            fullData = fullData.concat(await transformXMLToNiceJSON(response));
+        for (let hourOffset = -1; hourOffset < 2; hourOffset++) {
+          HH = moment(Date.now()).add({ hours: hourOffset }).format("HH");
+          for (const eva of evaArray) {
+            const url = `https://iris.noncd.db.de/iris-tts/timetable/plan/${eva}/${YYMMDD}/${HH}`;
+            try {
+              const response = await $.ajax({
+                url: url,
+                type: 'GET',
+              });
+              fullData = fullData.concat(await transformXMLToNiceJSON(response));
 
-          } catch {
-            console.log("GET Failed");
+            } catch (e) {
+              console.log(e);
+            }
+
           }
-
         }
 
-        const sortedData = fullData.sort((a, b) => b.pt_dp - b.pt_ar - (a.pt_dp - a.pt_ar));
+        const sortedData = fullData.sort((a, b) => a.pt_ar - b.pt_ar);
+        const filteredData = sortedData.filter(a => moment(a.pt_dp) > now);
 
-        const finalData = sortedData.map(row => ({
+        let finalData = filteredData.map(row => ({
           c: row.c,
           n: row.n,
-          pp_ar: row.pp_ar,
-          pt_ar: row.pt_ar,
-          pt_dp: row.pt_dp,
+          // pp_ar: row.pp_ar,
+          pp_dp: row.pp_dp,
+          pt_ar: moment(row.pt_ar).format("HH:mm"),
+          pt_dp: moment(row.pt_dp).format("HH:mm"),
           delta_minutes: Math.round((row.pt_dp - row.pt_ar) / (1000 * 60)),
         }));
+
+        finalData = finalData.filter(a => a.delta_minutes > 2)
 
         console.table(finalData);
         return finalData
       }
-      meta_evas = [8089021, 8011160, 8098160]
-      await getTimeTable(meta_evas, YYMMDD, HH);
-    }
+      
+      finalData = await getTimeTable(evas, YYMMDD, HH);
+      updateTable(finalData);
 
+    }
     run();
   </script>
 </body>
