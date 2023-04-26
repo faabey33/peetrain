@@ -56,5 +56,6 @@ $(document).ready(function () {
   $("#btn_search").on("click", function () {
     let code = $(".fstlist").children(".selected").attr("data-value");
     console.log(code);
+    run(code);
   });
 });

@@ -7,6 +7,8 @@ from xmlConverter import ElementTree, XmlDictConfig, XmlListConfig
 
 conn = http.client.HTTPSConnection("apis.deutschebahn.com")
 
+# conn = http.client.HTTPSConnection("iris.noncd.db.de")
+
 headers = {
     'DB-Client-Id': "aa3ec39feec75de5dc8c2f3cca743fc8",
     'DB-Api-Key': "b2003130c891c5bc9f10801efe94044b",
@@ -21,19 +23,22 @@ search_pattern = "BLS" #fragile --> no space no special chars
 date=f"{nowtime.year-2000}{nowtime.month:02}{nowtime.day}"
 hour=nowtime.hour
 
-### Station Request ###
-conn.request("GET", f"/db-api-marketplace/apis/timetables/v1/station/{search_pattern}", headers=headers)
-res = conn.getresponse()
-data = res.read()
-root = ElementTree.XML(data.decode("utf-8"))
-station_info_dict = XmlDictConfig(root)
+# ### Station Request ###
+# conn.request("GET", f"/db-api-marketplace/apis/timetables/v1/station/{search_pattern}", headers=headers)
+# res = conn.getresponse()
+# data = res.read()
+# root = ElementTree.XML(data.decode("utf-8"))
+# station_info_dict = XmlDictConfig(root)
 
-print(station_info_dict)
-#evaNo represents Station ID
-evaNo = station_info_dict["station"]["eva"]
+# print(station_info_dict)
+# #evaNo represents Station ID
+# evaNo = station_info_dict["station"]["eva"]
 
 ### Timetable Request ###
-conn.request("GET", f"https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1/plan/{evaNo}/{date}/{hour}", headers=headers)
+# url = "/iris-tts/timetable/plan/8089021/230411/16"
+# conn.request("GET", url, headers=headers)
+# conn.request("GET", f"https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1/plan/{evaNo}/{date}/{hour}", headers=headers)
+conn.request("GET", f"https://apis.deutschebahn.com/db-api-marketplace/apis/timetables/v1/plan/8089021/230411/16", headers=headers)
 res = conn.getresponse()
 data = res.read()
 root = ElementTree.XML(data.decode("utf-8"))

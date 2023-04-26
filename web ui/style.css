@@ -10,3 +10,17 @@ select {
     position: absolute;
     z-index: -1;
 }
+
+strike {
+    /* font-size: 0.8em; */
+    color: #6b6b6b;
+}
+
+span {
+    /* color: red; */
+    font-weight: 100;
+}
+
+body {
+    background: #3f3f3f;
+}
