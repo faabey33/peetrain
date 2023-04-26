@@ -128,24 +128,16 @@
       <form class="ui inverted form">
         <div class="field">
           <label>Station</label>
-          <div class="three fields">
+          <div class="two fields">
             <div class="field">
-              <input
-                type="text"
-                name="shipping[first-name]"
-                placeholder="Station name"
-              />
-            </div>
-
-            <div class="field">
-              <input
-                type="text"
-                name="shipping[last-name]"
-                placeholder="Date and Time"
-              />
+              <select name="cars" id="search_id" class="fstdropdown-select">
+                <option value="default">Bahnhof</option>
+              </select>
             </div>
             <div class="field">
-              <button class="ui fluid button">Search🚽</button>
+              <button class="ui fluid button" id="btn_search" type="button">
+                Search🚽
+              </button>
             </div>
           </div>
         </div>
@@ -181,6 +173,9 @@
     </div>
     <script src="//cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
     <script src="//cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.2.13/semantic.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js/dist/fuse.js"></script>
+    <script src="fstdropdown.js"></script>
+    <link rel="stylesheet" href="fstdropdown.css" />
     <script src="main.js"></script>
   </body>
 </html>

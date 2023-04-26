@@ -1,0 +1,12 @@
+.fstlist {
+    color: black;
+}
+
+.fstselected {
+    height: 35px;
+}
+
+select {
+    position: absolute;
+    z-index: -1;
+}
