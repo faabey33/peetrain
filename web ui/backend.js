@@ -36,7 +36,7 @@ function updateTable(data) {
     table.innerHTML = "";
 
     // Define the table head column names as an array
-    const columnNames = ['Type', 'Number', 'Platform', 'Arrival', 'Departure', 'Delta(min)'];
+    const columnNames = ['Number', 'Platform', 'Arrival', 'Departure', 'Delta(min)'];
 
     // Create the table head element
     const thead = document.createElement('thead');
@@ -57,7 +57,7 @@ function updateTable(data) {
     // Append the table head element to the table
     table.appendChild(thead);
 
-    const keys = ['c', 'n', 'pp_dp', 't_ar', 't_dp', 'delta_minutes']
+    const keys = ['n', 'pp_dp', 't_ar', 't_dp', 'delta_minutes']
     // Get a reference to the table element
 
     // Loop through the array of data
@@ -310,8 +310,7 @@ async function run(pattern = "BLS") {
             const delta_minutes = Math.round(row.delta / (1000 * 60));
 
             return {
-                c: row.c,
-                n: row.n,
+                n: row.c + " " + row.n,
                 changes: row.changes,
                 ct_ar: moment(row.ct_ar).format("HH:mm"),
                 ct_dp: moment(row.ct_dp).format("HH:mm"),
